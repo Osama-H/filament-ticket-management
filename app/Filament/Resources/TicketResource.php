@@ -41,7 +41,7 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn(Builder $query) => auth()->user()->hasRole(Role::ROLES['Agent'])
+            ->modifyQueryUsing(fn(Builder $query) => auth()->user()->hasRole(Role::ROLES['Admin'])
                 ? $query : $query->where('assigned_to', auth()->id()))
             ->defaultSort('created_at', 'desc')
             ->columns([
