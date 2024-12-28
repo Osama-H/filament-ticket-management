@@ -4,15 +4,16 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TicketResource\Pages;
 use App\Filament\Resources\TicketResource\RelationManagers;
+use App\Models\Role;
 use App\Models\Ticket;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TicketResource extends Resource
 {
@@ -24,32 +25,32 @@ class TicketResource extends Resource
     {
         return $form
             ->schema([
-                //
                 Forms\Components\TextInput::make('title')->required()->autofocus(),
                 Forms\Components\Textarea::make('description')->required()->rows(3),
                 Forms\Components\Select::make('status')->options(self::$model::STATUS)->required()->in(self::$model::STATUS),
                 Forms\Components\Select::make('priority')->options(self::$model::PRIORITY)->required()->in(self::$model::PRIORITY),
                 Forms\Components\Textarea::make('comment')->required()->rows(3),
-
-                Forms\Components\Select::make('assigned_to')->relationship('assignedTo', 'name')->required(),
-
+                Forms\Components\Select::make('assigned_to')
+                    ->options(User::whereHas('roles', function (Builder $query) {
+                        $query->where('name', Role::ROLES['Agent']);
+                    })->pluck('name', 'id')->toArray())
+                    ->required(),
             ])->columns(3);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn(Builder $query) => auth()->user()->hasRole(Role::ROLES['Agent'])
+                ? $query : $query->where('assigned_to', auth()->id()))
+            ->defaultSort('created_at', 'desc')
             ->columns([
-                //
-
                 Tables\Columns\TextColumn::make('title')
                     ->description(fn(Ticket $record): ?string => $record?->description ?? null)
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\SelectColumn::make('status')
-                    ->options(self::$model::STATUS)
-
-                ,
+                    ->options(self::$model::STATUS),
                 Tables\Columns\TextColumn::make('priority')
                     ->badge()
                     ->colors([
@@ -67,20 +68,19 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
-
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->options(self::$model::STATUS),
+                SelectFilter::make('priority')
+                    ->options(self::$model::PRIORITY),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
-
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

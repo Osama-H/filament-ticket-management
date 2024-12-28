@@ -30,13 +30,13 @@ class CategoryResource extends Resource
                 //
                 Forms\Components\TextInput::make('name')->
                 required()->
-                unique()->
+                unique(ignoreRecord: true)->
                 lazy()-> // the default is deferred, But we have to set it live here ..
                 autofocus()->
                 afterStateUpdated(function (Set $set, string $state) {
                     $set('slug', str()->slug($state));
                 }),
-                Forms\Components\TextInput::make('slug')->required()->unique(),
+                Forms\Components\TextInput::make('slug')->required()->unique(ignoreRecord: true),
                 Forms\Components\Toggle::make('is_active')->default(false)
             ]);
     }
@@ -56,6 +56,8 @@ class CategoryResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -75,8 +77,8 @@ class CategoryResource extends Resource
     {
         return [
             'index' => Pages\ListCategories::route('/'),
-            'create' => Pages\CreateCategory::route('/create'),
-            'edit' => Pages\EditCategory::route('/{record}/edit'),
+//            'create' => Pages\CreateCategory::route('/create'),
+//            'edit' => Pages\EditCategory::route('/{record}/edit'),
         ];
     }
 }
