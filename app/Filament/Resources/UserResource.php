@@ -5,16 +5,22 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Filament\Resources\UserResource\RelationManagers\RolesRelationManager;
+use App\Models\Role;
 use App\Models\User;
+use App\Services\TextMessageService;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Notifications\Notification;
+
 
 class UserResource extends Resource
 {
@@ -48,9 +54,14 @@ class UserResource extends Resource
                 //
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('email')->searchable()->sortable(),
+                TextColumn::make('roles.name')->badge()->searchable()
             ])
             ->filters([
                 //
+                SelectFilter::make('role')
+                    ->relationship('roles', 'name')
+                    ->preload()
+
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -58,6 +69,30 @@ class UserResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('send Bulk Sms')
+                        ->modalButton('Send SMS')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->deselectRecordsAfterCompletion()
+                        // we will define two forms .. message and remark
+                        ->form([
+                            Forms\Components\Textarea::make('message')
+                                ->required()
+                                ->placeholder('Enter your message here')
+                                ->autofocus()
+                                ->rows(3),
+                            Forms\Components\Textarea::make('Remarks')
+                        ])
+                        ->action(function (array $data, Collection $records) {
+                            TextMessageService::sendMsg($data, $records);
+
+                            // adding a notification for action
+
+                            Notification::make()
+                                ->title('Messages sent')
+                                ->success()
+                                ->send();
+                        })
+                    ,
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
