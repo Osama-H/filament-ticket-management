@@ -35,6 +35,9 @@ class TicketResource extends Resource
                         $query->where('name', Role::ROLES['Agent']);
                     })->pluck('name', 'id')->toArray())
                     ->required(),
+                Forms\Components\FileUpload::make('attachment')
+
+
             ])->columns(3);
     }
 
